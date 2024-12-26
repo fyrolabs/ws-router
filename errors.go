@@ -22,3 +22,10 @@ func NewActionNotFoundErr(cmd string) *Error {
 		Code:    "action_not_found",
 	}
 }
+
+var (
+	ErrChannelNotFound = Error{
+		Code:    "channel_not_found",
+		Message: "channel not found",
+	}
+)

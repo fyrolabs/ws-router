@@ -7,13 +7,6 @@ import (
 	"github.com/olahol/melody"
 )
 
-var (
-	ErrChannelNotFound = Error{
-		Code:    "channel_not_found",
-		Message: "channel not found",
-	}
-)
-
 type Channel struct {
 	Name        string
 	Handler     ChannelHandler

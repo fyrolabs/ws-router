@@ -1,13 +1,13 @@
 module github.com/fyrolabs/ws-router
 
-go 1.20
+go 1.23.3
 
 require (
-	github.com/deckarep/golang-set/v2 v2.3.0
-	github.com/olahol/melody v1.1.3
+	github.com/deckarep/golang-set/v2 v2.7.0
+	github.com/olahol/melody v1.2.1
 )
 
 require (
-	github.com/gorilla/websocket v1.5.0 // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
+	github.com/stretchr/testify v1.10.0 // indirect
 )
