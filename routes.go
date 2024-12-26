@@ -12,11 +12,20 @@ var (
 	EventStatusEnded = "ended"
 )
 
+type Route struct {
+	// Unique key for the route, used to match incoming requests
+	Key     string
+	Handler RouteHandler
+}
+
 type RouteHandler func(*Context)
 
 type Request struct {
-	ID     string          `json:"id"`
-	Action string          `json:"action"`
+	// Unique ID set by the client, can be empty, used to track responses
+	ID string `json:"id"`
+	// Action is the name to match a route by a given key string
+	Action string `json:"action"`
+	// Params is the json data params sent by the client
 	Params json.RawMessage `json:"params"`
 }
 
@@ -27,6 +36,9 @@ type Reply struct {
 	Error  error  `json:"error,omitempty"`
 }
 
+// Context is the context for a request.
+// use c.Get(key) and c.Set(key) to get and set session data
+// c.Respond(data) to send a response
 type Context struct {
 	Request *Request
 	session *melody.Session
@@ -44,7 +56,7 @@ func (c *Context) Get(key string) any {
 	return value
 }
 
-func (w *WS) RouteRequest(s *melody.Session, msg []byte) {
+func (r *Router) RouteRequest(s *melody.Session, msg []byte) {
 	c := &Context{session: s}
 
 	var req *Request
@@ -54,15 +66,15 @@ func (w *WS) RouteRequest(s *melody.Session, msg []byte) {
 	}
 	c.Request = req
 
-	handler, exists := w.Routes[req.Action]
+	handler, exists := r.routes[req.Action]
 	if !exists {
 		c.Error(NewActionNotFoundErr(req.Action))
 		return
 	}
 
 	// Run before route hook
-	if w.BeforeRoute != nil {
-		if err := w.BeforeRoute(c); err != nil {
+	if r.BeforeRoute != nil {
+		if err := r.BeforeRoute(c); err != nil {
 			c.Error(err)
 		}
 	}
