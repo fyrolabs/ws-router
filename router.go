@@ -16,7 +16,7 @@ type Router struct {
 
 type H map[string]any
 
-func New(routes []Route, channels []Channel) *Router {
+func New(routes []Route, channels []*Channel) *Router {
 	mldy := melody.New()
 	mldy.Config.MaxMessageSize = 500_000 // 500 KB
 
@@ -27,7 +27,7 @@ func New(routes []Route, channels []Channel) *Router {
 
 	channelMap := map[string]*Channel{}
 	for _, channel := range channels {
-		channelMap[channel.Name] = &channel
+		channelMap[channel.Name] = channel
 	}
 
 	ws := &Router{
@@ -61,7 +61,7 @@ func (r *Router) setup() {
 	r.mldy.HandleDisconnect(func(s *melody.Session) {
 		// Remove subscribers from channels
 		for _, c := range r.channels {
-			for _, sessions := range c.Subscribers {
+			for _, sessions := range c.subscribers {
 				sessions.Remove(s)
 			}
 		}

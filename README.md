@@ -24,6 +24,11 @@ Create channels by:
 // This can be an user ID, or an enum string to separate different actions within a channel.
 // If the keyFunc is nil, then no separation will occur.
 func NewChannel(name string, keyFunc ChannelKeyFunc)
+
+// Where keyFunc is:
+func(ctx *Context, params json.RawMessage) (string, error)
+
+// ctx is the session context, and params is sent by the subscription request
 ```
 
 Pass into init

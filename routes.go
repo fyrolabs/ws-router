@@ -36,26 +36,6 @@ type Reply struct {
 	Error  error  `json:"error,omitempty"`
 }
 
-// Context is the context for a request.
-// use c.Get(key) and c.Set(key) to get and set session data
-// c.Respond(data) to send a response
-type Context struct {
-	Request *Request
-	session *melody.Session
-}
-
-func (c *Context) Set(key string, value any) {
-	c.session.Set(key, value)
-}
-
-func (c *Context) Get(key string) any {
-	value, exists := c.session.Get(key)
-	if !exists {
-		return nil
-	}
-	return value
-}
-
 func (r *Router) RouteRequest(s *melody.Session, msg []byte) {
 	c := &Context{session: s}
 

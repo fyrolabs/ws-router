@@ -10,11 +10,11 @@ import (
 type Channel struct {
 	Name        string
 	KeyFunc     ChannelKeyFunc
-	Subscribers Subscribers
+	subscribers subscribers
 }
 
-type ChannelKeyFunc func(*Context, json.RawMessage) (string, error)
-type Subscribers map[string]mapset.Set[*melody.Session]
+type ChannelKeyFunc func(ctx *Context, params json.RawMessage) (string, error)
+type subscribers map[string]mapset.Set[*melody.Session]
 
 // NewChannel creates a new channel with the given name and optional key function
 // which returns a string.
@@ -25,7 +25,7 @@ func NewChannel(name string, keyFunc ChannelKeyFunc) *Channel {
 	return &Channel{
 		Name:        name,
 		KeyFunc:     keyFunc,
-		Subscribers: Subscribers{},
+		subscribers: subscribers{},
 	}
 }
 
@@ -41,6 +41,9 @@ type BroadcastReply struct {
 	Error   error  `json:"error,omitempty"`
 }
 
+// subscribeRouteHandler processes a subscribe request sent by the client.
+// keyFunc is run to obtain a sub key to separate subscribers within the channel.
+// if an error occurs during keyFunc(), it is returned to the client and the client is not subscribed.
 func (r *Router) subscribeRouteHandler() RouteHandler {
 	return func(c *Context) {
 		var req SubscribeRequest
@@ -63,6 +66,7 @@ func (r *Router) subscribeRouteHandler() RouteHandler {
 			key, err = channel.KeyFunc(c, req.Params)
 			if err != nil {
 				c.Error(err)
+				return
 			}
 		}
 
@@ -72,12 +76,12 @@ func (r *Router) subscribeRouteHandler() RouteHandler {
 }
 
 func (c *Channel) addSubscriber(key string, s *melody.Session) {
-	_, exists := c.Subscribers[key]
+	_, exists := c.subscribers[key]
 	if !exists {
-		c.Subscribers[key] = mapset.NewSet[*melody.Session]()
+		c.subscribers[key] = mapset.NewSet[*melody.Session]()
 	}
 
-	c.Subscribers[key].Add(s)
+	c.subscribers[key].Add(s)
 }
 
 // Broadcast sends a message to all subscribers in the channel with the given key.
@@ -98,7 +102,7 @@ func (r *Router) Broadcast(
 		return err
 	}
 
-	sessions, exists := c.Subscribers[key]
+	sessions, exists := c.subscribers[key]
 	if !exists {
 		return nil // No subscribers, return early
 	}
