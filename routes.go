@@ -7,9 +7,15 @@ import (
 	"github.com/olahol/melody"
 )
 
+type SendKind string
+
+const (
+	SendKindResponse  SendKind = "response"
+	SendKindBroadcast SendKind = "broadcast"
+)
+
 var (
-	ResponseSuccess  = H{"success": true}
-	EventStatusEnded = "ended"
+	ResponseSuccess = H{"success": true}
 )
 
 type Route struct {
@@ -20,6 +26,7 @@ type Route struct {
 
 type RouteHandler func(*Context)
 
+// Request is the incoming message from the client
 type Request struct {
 	// Unique ID set by the client, can be empty, used to track responses
 	ID string `json:"id"`
@@ -29,11 +36,21 @@ type Request struct {
 	Params json.RawMessage `json:"params"`
 }
 
-type Reply struct {
-	ID     string `json:"id"`
-	Action string `json:"action"`
-	Data   any    `json:"data,omitempty"`
-	Error  error  `json:"error,omitempty"`
+type SendData struct {
+	Kind SendKind `json:"kind"`
+	Data any      `json:"data"`
+}
+
+type SendResponse struct {
+	RequestID string `json:"requestId,omitempty"`
+	Data      any    `json:"data,omitempty"`
+	Error     error  `json:"error,omitempty"`
+}
+
+type SendBroadcast struct {
+	Channel string `json:"channel"`
+	Event   string `json:"event"`
+	Data    any    `json:"data"`
 }
 
 func (r *Router) RouteRequest(s *melody.Session, msg []byte) {
@@ -63,16 +80,22 @@ func (r *Router) RouteRequest(s *melody.Session, msg []byte) {
 }
 
 func (c *Context) Respond(msg any) {
-	reply := Reply{
-		ID:     c.Request.ID,
-		Action: c.Request.Action,
-		Data:   msg,
+	sendData := SendData{
+		Kind: SendKindResponse,
+		Data: SendResponse{
+			RequestID: c.Request.ID,
+			Data:      msg,
+		},
 	}
 
-	c.Write(reply)
+	c.Write(sendData)
 }
 
 func (c *Context) Error(err error) {
+	if c.Request == nil {
+		return
+	}
+
 	if !errors.As(err, &Error{}) {
 		err = Error{
 			Name:    "GenericError",
@@ -80,14 +103,15 @@ func (c *Context) Error(err error) {
 		}
 	}
 
-	reply := Reply{Error: err}
-
-	if c.Request != nil {
-		reply.ID = c.Request.ID
-		reply.Action = c.Request.Action
+	sendData := SendData{
+		Kind: SendKindResponse,
+		Data: SendResponse{
+			RequestID: c.Request.ID,
+			Error:     err,
+		},
 	}
 
-	c.Write(reply)
+	c.Write(sendData)
 }
 
 func (c *Context) Write(data any) error {

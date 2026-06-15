@@ -8,55 +8,46 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type RedisBroadcast struct {
+type RedisBroadcaster struct {
 	router   *Router
 	rdb      *redis.Client
 	rChannel string
 }
 
-type RedisBroadcastOpts struct {
+type RedisBroadcasterOpts struct {
 	Router       *Router
 	RDB          *redis.Client
 	RedisChannel string
 }
 
-type RedisBroadcastData struct {
-	Channel string `json:"channel"`
-	Key     string `json:"key"`
-	Event   string `json:"event"`
-	Message any    `json:"message"`
-}
-
-func NewRedisBroadcast(opts RedisBroadcastOpts) *RedisBroadcast {
-	return &RedisBroadcast{
+func NewRedisBroadcaster(opts RedisBroadcasterOpts) *RedisBroadcaster {
+	return &RedisBroadcaster{
 		router:   opts.Router,
 		rdb:      opts.RDB,
 		rChannel: opts.RedisChannel,
 	}
 }
 
-func (b *RedisBroadcast) Server() {
+func (b *RedisBroadcaster) Server() {
 	pubSub := b.rdb.Subscribe(context.Background(), b.rChannel)
 	redisChan := pubSub.Channel()
 
 	for {
 		redisMsg := <-redisChan
-		var data RedisBroadcastData
-		if err := json.Unmarshal([]byte(redisMsg.Payload), &data); err != nil {
+		var opts BroadcastOpts
+		if err := json.Unmarshal([]byte(redisMsg.Payload), &opts); err != nil {
 			log.Println(err)
 			continue
 		}
 
-		if err := b.router.Broadcast(
-			data.Channel, data.Key, data.Event, data.Message,
-		); err != nil {
+		if err := b.router.Broadcast(opts); err != nil {
 			log.Println(err)
 		}
 	}
 }
 
-func (b *RedisBroadcast) Broadcast(params RedisBroadcastData) error {
-	payload, err := json.Marshal(params)
+func (b *RedisBroadcaster) Broadcast(opts BroadcastOpts) error {
+	payload, err := json.Marshal(opts)
 	if err != nil {
 		return err
 	}

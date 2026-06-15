@@ -34,11 +34,17 @@ type SubscribeRequest struct {
 	Params  json.RawMessage `json:"params"`
 }
 
-type BroadcastReply struct {
+type BroadcastOpts struct {
+	Channel string `json:"channel"`
+	Key     string `json:"key"`
+	Event   string `json:"event"`
+	Data    any    `json:"data"`
+}
+
+type BroadcastResponseData struct {
 	Channel string `json:"channel"`
 	Event   string `json:"event,omitempty"`
 	Data    any    `json:"data,omitempty"`
-	Error   error  `json:"error,omitempty"`
 }
 
 // subscribeRouteHandler processes a subscribe request sent by the client.
@@ -88,21 +94,25 @@ func (c *Channel) addSubscriber(key string, s *melody.Session) {
 // If the channel is not key separated, then the key can be an empty string.
 // event: name of the event to send to the client
 // msg: JSON serializable payload
-func (r *Router) Broadcast(
-	channel string, key string, event string, msg any,
-) error {
-	c, exists := r.channels[channel]
+func (r *Router) Broadcast(opts BroadcastOpts) error {
+	c, exists := r.channels[opts.Channel]
 	if !exists {
 		return ErrChannelNotFound
 	}
 
-	reply := BroadcastReply{Channel: channel, Event: event, Data: msg}
-	payload, err := json.Marshal(reply)
+	sendData := SendData{
+		Kind: SendKindBroadcast,
+		Data: BroadcastResponseData{
+			Channel: opts.Channel, Event: opts.Event, Data: opts.Data,
+		},
+	}
+
+	payload, err := json.Marshal(sendData)
 	if err != nil {
 		return err
 	}
 
-	sessions, exists := c.subscribers[key]
+	sessions, exists := c.subscribers[opts.Key]
 	if !exists {
 		return nil // No subscribers, return early
 	}
